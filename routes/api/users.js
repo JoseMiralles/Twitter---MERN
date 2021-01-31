@@ -1,31 +1,55 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
+const keys = require("../../config/keys");
 const User = require("../../models/User");
 
 // Create User
 router.post("/register", (req, res) => {
-    User.findOne({ email: req.body.email })
+    
+    // const { errors, isValid } = validateRegisterInput(req.body);
+    errors = {};
+    isValid = true;
+
+    if (!isValid) {
+        return res.status(400).json(errors);
+    }
+
+    User.findOne({ handle: req.body.handle })
         .then(user => {
 
             if (user){
-                // Throw error, this email is already taken.
-                return res.status(400).json({email: "The Email address is already in use!"});
+                // Throw error, this handle is already taken.
+                errors.handle = "User already exists";
+                return res.status(400).json(errors);
             } else {
+
                 // Email not in use, create the user.
                 const newUser = new User({
                     handle: req.body.handle,
-                    email: req.body.email,
-                    password: req.body.password
+                    email: req.body.email
                 });
 
+                // Generate the password digest.
                 bcrypt.genSalt(10, (err, salt) => {
-                    bcrypt.hash(newUser.password, salt, (err, hash) => {
+                    bcrypt.hash(req.body.password , salt, (err, hash) => {
                         if (err) throw err;
-                        newUser.password = hash; // Replace the password with the hashed password.
+                        newUser.password = hash;
                         newUser.save()
-                            .then(user => res.json(user)) // Return the user if the creation was successful.
+                            .then(user => {
+
+                                const payload = { id: user.id, handle: user.handle };
+
+                                jwt.sign(payload, keys.secretOrKey, { expiresIn: 3600 }, (err, token) => {
+                                    res.json({
+                                        success: true,
+                                        token: `Bearer ${token}` // Add session token to response.
+                                    });
+                                });
+
+                            }) // Return the user if the creation was successful.
                             .catch(err => console.log(err)) // Log the errors to the console if failed.
                     });
                 });
@@ -36,20 +60,45 @@ router.post("/register", (req, res) => {
 
 // Create Session | Login
 router.post("/login", (req, res) => {
-    User.findOne({ email: req.body.email })
+
+    // const { errors, isValid } = validateLoginInput(req.body);
+    errors = {};
+    isValid = true;
+
+    if (!isValid){
+        return res.status(400).json(errors);
+    }
+
+    User.findOne({ handle: req.body.handle })
         .then(user => {
 
             if (!user){
-                // Bad email, return error.
-                return res.status(404).json({ email: "This user does not exist." });
+                // Bad handle, return error.
+                errors.handle = "This user does not exist";
+                return res.status(404).json(errors);
             }
 
+            // BCrypt hashes the incoming password, and then compares the hashed output with the one in the db.
             bcrypt.compare(req.body.password, user.password)
             .then(isMatch => {
                 if (isMatch) {
-                    res.json({ msg: "Success" });
+                    
+                    // Correct credentials, log user in.
+                    const payload = { id: user.id, handle: user.handle };
+                    jwt.sign(
+                        payload, keys.secretOrKey,
+                        { expiresIn: 3600 }, // Key now expires in one hour.
+                        (err, token) => {
+                            res.json({
+                                success: true,
+                                token: `Bearer ${token}`
+                            });
+                        }
+                    );
+
                 } else {
-                    return res.status.json({password: "Incorrect password"});
+                    errors.password = "Incorrect password"
+                    return res.status(400).json(errors);
                 }
             });
 
