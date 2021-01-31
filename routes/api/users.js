@@ -6,6 +6,8 @@ const passport = require("passport");
 
 const keys = require("../../config/keys");
 const User = require("../../models/User");
+const validateRegisterInput = require("../../validation/register");
+const validateLoginInput = require("../../validation/login");
 
 // Get Current User
 router.get("/current", passport.authenticate("jwt", {session: false}), (req, res) => {
@@ -19,9 +21,7 @@ router.get("/current", passport.authenticate("jwt", {session: false}), (req, res
 // Create User
 router.post("/register", (req, res) => {
 
-    // const { errors, isValid } = validateRegisterInput(req.body);
-    errors = {};
-    isValid = true;
+    const { errors, isValid } = validateRegisterInput(req.body);
 
     if (!isValid) {
         return res.status(400).json(errors);
@@ -71,20 +71,18 @@ router.post("/register", (req, res) => {
 // Create Session | Login
 router.post("/login", (req, res) => {
 
-    // const { errors, isValid } = validateLoginInput(req.body);
-    errors = {};
-    isValid = true;
+    const { errors, isValid } = validateLoginInput(req.body);
 
     if (!isValid){
         return res.status(400).json(errors);
     }
 
-    User.findOne({ handle: req.body.handle })
+    User.findOne({ email: req.body.email })
         .then(user => {
 
             if (!user){
-                // Bad handle, return error.
-                errors.handle = "This user does not exist";
+                // Bad email, return error.
+                errors.email = "This user does not exist";
                 return res.status(404).json(errors);
             }
 
@@ -94,7 +92,7 @@ router.post("/login", (req, res) => {
                 if (isMatch) {
                     
                     // Correct credentials, log user in.
-                    const payload = { id: user.id, handle: user.handle };
+                    const payload = { id: user.id, email: user.email };
                     jwt.sign(
                         payload, keys.secretOrKey,
                         { expiresIn: 3600 }, // Key now expires in one hour.
