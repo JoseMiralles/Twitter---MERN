@@ -4,9 +4,11 @@ const bcrypt = require("bcryptjs");
 
 const User = require("../../models/User");
 
+// Create User
 router.post("/register", (req, res) => {
     User.findOne({ email: req.body.email })
         .then(user => {
+
             if (user){
                 // Throw error, this email is already taken.
                 return res.status(400).json({email: "The Email address is already in use!"});
@@ -28,7 +30,30 @@ router.post("/register", (req, res) => {
                     });
                 });
             }
-        })
+
+        });
+});
+
+// Create Session | Login
+router.post("/login", (req, res) => {
+    User.findOne({ email: req.body.email })
+        .then(user => {
+
+            if (!user){
+                // Bad email, return error.
+                return res.status(404).json({ email: "This user does not exist." });
+            }
+
+            bcrypt.compare(req.body.password, user.password)
+            .then(isMatch => {
+                if (isMatch) {
+                    res.json({ msg: "Success" });
+                } else {
+                    return res.status.json({password: "Incorrect password"});
+                }
+            });
+
+        });
 });
 
 module.exports = router;
