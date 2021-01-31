@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
+const passport = require("passport");
 
 // IMPORT ROUTES:
 const users = require("./routes/api/users");
@@ -15,12 +16,10 @@ mongoose.connect(db, { useNewUrlParser: true, useUnifiedTopology: true })
 // MIDDLEWARE:
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(passport.initialize());
+require("./config/passport")(passport);
 
 // ROUTES:
-app.get("/", (req, res) => {
-    debugger
-    res.send("Hello World, by Jose Miralles!")
-});
 app.use("/api/users", users);
 app.use("/api/tweets", tweets);
 
