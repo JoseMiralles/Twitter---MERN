@@ -14,6 +14,7 @@ module.exports = function validateTweetInput(data){
         errors.text = "Text field is required";
     }
 
+    debugger
     return {
         errors,
         isValid: Object.keys(errors).length === 0

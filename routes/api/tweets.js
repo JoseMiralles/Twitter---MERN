@@ -37,8 +37,7 @@ router.post("/",
     // Protect this route
     passport.authenticate("jwt", { session: false }),
     (req, res) => {
-        debugger
-        const { errors, isValid } = validateTweetInput(req, req.body);
+        const { errors, isValid } = validateTweetInput(req.body);
 
         if (!isValid) {
             return res.status(400).json(errors);
